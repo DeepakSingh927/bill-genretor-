@@ -36,16 +36,18 @@ export const generatePDF = async (elementId: string, filename: string): Promise<
     document.body.removeChild(wrapper);
 
     const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
+    
+    // A4 width in mm
+    const pdfWidth = 210;
     // Calculate height proportionally
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
     
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [210, Math.max(297, pdfHeight)], // Make page taller than A4 if needed
+    });
+
     pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
     
     // Save for download
