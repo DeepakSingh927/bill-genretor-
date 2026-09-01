@@ -2,8 +2,10 @@ export type BillItem = {
   id: string;
   name: string;
   hindiName?: string;
-  quantity: number;
-  rate: number;
+  quantity: string;
+  unit?: string;
+  rate: string;
+  isCustom?: boolean;
 };
 
 export type BillData = {

@@ -1,13 +1,14 @@
 import React from "react";
 import { BillData } from "@/types/bill";
 import { Leaf } from "lucide-react"; // Fallback logo
+import { getItemAmount } from "@/lib/utils";
 
 interface BillPreviewProps {
   data: BillData;
 }
 
 export const BillPreview: React.FC<BillPreviewProps> = ({ data }) => {
-  const totalAmount = data.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+  const totalAmount = data.items.reduce((sum, item) => sum + getItemAmount(item), 0);
 
   return (
     <div
@@ -68,10 +69,12 @@ export const BillPreview: React.FC<BillPreviewProps> = ({ data }) => {
                   <td className="border-2 border-black px-1 text-center">{index + 1}</td>
                   <td className="border-2 border-black px-1 uppercase">{item.name}</td>
                   <td className="border-2 border-black px-1 text-sm font-medium">{item.hindiName}</td>
-                  <td className="border-2 border-black px-1 text-center">{item.quantity || ""}</td>
+                  <td className="border-2 border-black px-1 text-center whitespace-nowrap">
+                    {item.quantity ? `${item.quantity} ${item.unit || 'kg'}` : ""}
+                  </td>
                   <td className="border-2 border-black px-1 text-center">{item.rate || ""}</td>
                   <td className="border-2 border-black px-1 text-right">
-                    {(item.quantity * item.rate) || ""}
+                    {getItemAmount(item) > 0 ? getItemAmount(item).toFixed(2) : ""}
                   </td>
                 </tr>
               ))}
