@@ -1,62 +1,77 @@
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 
-export const generatePDF = async (elementId: string, filename: string): Promise<Blob | null> => {
+export const generatePDF = async (
+  elementId: string,
+  filename: string,
+  options: { download?: boolean } = { download: true }
+): Promise<Blob | null> => {
   const originalElement = document.getElementById(elementId);
-  if (!originalElement) return null;
+  if (!originalElement) {
+    console.error(`Element #${elementId} not found for PDF generation`);
+    return null;
+  }
 
   // Create an off-screen wrapper to force desktop-like rendering of the A4 layout
-  // This prevents mobile screen constraints from squishing or damaging the PDF layout
   const wrapper = document.createElement("div");
   wrapper.style.position = "absolute";
   wrapper.style.top = "-9999px";
   wrapper.style.left = "-9999px";
-  // A4 width in pixels (approx 794px at 96 DPI)
-  wrapper.style.width = "794px"; 
+  wrapper.style.width = "794px"; // A4 width at 96 DPI
   wrapper.style.backgroundColor = "white";
 
   const clone = originalElement.cloneNode(true) as HTMLElement;
-  // Remove any margin/scale that might affect the clone
   clone.style.margin = "0";
   clone.style.transform = "none";
   wrapper.appendChild(clone);
-  
+
   document.body.appendChild(wrapper);
 
   try {
+    // Wait for all images (like /logo.png) in the cloned element to be fully loaded
+    const images = Array.from(clone.querySelectorAll("img"));
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+          setTimeout(resolve, 500); // 500ms safety timeout
+        });
+      })
+    );
+
     const canvas = await html2canvas(clone, {
       scale: 2, // High resolution
       useCORS: true,
       logging: false,
       width: 794,
-      windowWidth: 794, // Force html2canvas to act like a desktop screen
+      windowWidth: 794,
     });
-    
+
     // Cleanup the DOM immediately
     document.body.removeChild(wrapper);
 
     const imgData = canvas.toDataURL("image/png");
-    
-    // A4 width in mm
+
     const pdfWidth = 210;
-    // Calculate height proportionally
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    
+
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
-      format: [210, Math.max(297, pdfHeight)], // Make page taller than A4 if needed
+      format: [210, Math.ceil(pdfHeight)],
     });
 
     pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    
-    // Save for download
-    pdf.save(filename);
-    
+
+    if (options.download !== false) {
+      pdf.save(filename);
+    }
+
     return pdf.output("blob");
   } catch (error) {
     console.error("Error generating PDF:", error);
-    // Ensure cleanup even if error occurs
     if (document.body.contains(wrapper)) {
       document.body.removeChild(wrapper);
     }

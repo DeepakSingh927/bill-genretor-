@@ -1,0 +1,101 @@
+{
+  "clients": [
+    {
+      "id": "client_1793182473787_ns1ub",
+      "hotelName": "Samridhi",
+      "isActive": true,
+      "createdAt": "2026-10-28T10:14:33.787Z",
+      "updatedAt": "2026-10-28T10:14:33.787Z"
+    },
+    {
+      "id": "client_1793182452506_gj61r",
+      "hotelName": "Mi Hi Koli",
+      "isActive": false,
+      "createdAt": "2026-10-28T10:14:12.506Z",
+      "updatedAt": "2026-10-28T10:14:14.234Z"
+    },
+    {
+      "id": "client_1793182438623_6ykp0",
+      "hotelName": "Coastal Tawa Vikroli",
+      "isActive": false,
+      "createdAt": "2026-10-28T10:13:58.623Z",
+      "updatedAt": "2026-10-28T10:14:00.303Z"
+    },
+    {
+      "id": "client_1793182412540_ony8q",
+      "hotelName": "Coastal Tawa",
+      "isActive": false,
+      "createdAt": "2026-10-28T10:13:32.540Z",
+      "updatedAt": "2026-10-28T10:13:41.635Z"
+    },
+    {
+      "id": "client_1793182388862_hg2l9",
+      "hotelName": "Mi Hi Koli Waghbil",
+      "isActive": true,
+      "createdAt": "2026-10-28T10:13:08.862Z",
+      "updatedAt": "2026-10-28T10:13:08.862Z"
+    },
+    {
+      "id": "client_1793182336936_bf012",
+      "hotelName": "MH 12",
+      "isActive": true,
+      "createdAt": "2026-10-28T10:12:16.936Z",
+      "updatedAt": "2026-10-28T10:12:16.936Z"
+    },
+    {
+      "id": "client_1793182328259_mexp9",
+      "hotelName": "Hind Kesari",
+      "isActive": true,
+      "createdAt": "2026-10-28T10:12:08.259Z",
+      "updatedAt": "2026-10-28T10:12:08.259Z"
+    },
+    {
+      "id": "client_1793182311190_rb0zf",
+      "hotelName": "Bombay Door",
+      "address": "Majiwada",
+      "isActive": true,
+      "createdAt": "2026-10-28T10:11:51.190Z",
+      "updatedAt": "2026-10-28T10:11:51.190Z"
+    },
+    {
+      "id": "client_1793181240691_k2imu",
+      "hotelName": "Rajdarbar",
+      "contactPerson": "Brijesh",
+      "phone": "8657853656",
+      "address": "louis wadi near Rto",
+      "isActive": true,
+      "createdAt": "2026-10-28T09:54:00.691Z",
+      "updatedAt": "2026-10-28T09:54:00.691Z"
+    },
+    {
+      "id": "client-spice",
+      "hotelName": "Pappu da Dhaba",
+      "address": "Louis Wadi",
+      "isActive": true,
+      "createdAt": "2026-10-13T09:32:50.777Z",
+      "updatedAt": "2026-10-28T10:12:46.440Z"
+    },
+    {
+      "id": "client-sagar",
+      "hotelName": "Khavivya",
+      "address": "Ram maruti Road",
+      "notes": "Strict quality check on leafy greens",
+      "isActive": true,
+      "createdAt": "2026-10-03T09:32:50.777Z",
+      "updatedAt": "2026-10-28T10:10:48.803Z"
+    },
+    {
+      "id": "client-taj",
+      "hotelName": "Jai Hind",
+      "contactPerson": "Sagar",
+      "address": "Ram maruti road",
+      "notes": "Requires morning delivery before 10:00 AM",
+      "isActive": true,
+      "createdAt": "2026-09-28T09:32:50.777Z",
+      "updatedAt": "2026-10-28T10:09:38.896Z"
+    }
+  ],
+  "bills": [],
+  "maxSeq": 1009,
+  "updatedAt": "2026-10-29T09:17:37.687Z"
+}
