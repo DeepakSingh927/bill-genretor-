@@ -242,7 +242,7 @@ export const BillRecordsView: React.FC<BillRecordsViewProps> = ({
     });
   };
 
-  const executeConfirmedAction = () => {
+  const executeConfirmedAction = async () => {
     const { bill, actionType } = confirmModalData;
     if (!bill) return;
 
@@ -251,14 +251,14 @@ export const BillRecordsView: React.FC<BillRecordsViewProps> = ({
     } else if (actionType === "restore") {
       storage.restoreBill(bill.id);
     } else if (actionType === "delete") {
-      storage.deleteBill(bill.id);
+      await storage.deleteBill(bill.id);
     }
 
     setConfirmModalData({ isOpen: false, bill: null, actionType: "archive" });
     if (selectedBillForDetails?.id === bill.id) {
       setSelectedBillForDetails(null);
     }
-    onRefresh();
+    await onRefresh();
   };
 
   return (

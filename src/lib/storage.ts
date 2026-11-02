@@ -142,7 +142,7 @@ class StorageService {
     }
   }
 
-  public async syncFromBackend(): Promise<{ clients: Client[]; bills: SavedBill[] } | null> {
+  public async syncFromBackend(): Promise<{ clients: Client[]; bills: SavedBill[]; source?: string } | null> {
     try {
       const res = await fetch("/api/records");
       if (res.ok) {
@@ -156,7 +156,11 @@ class StorageService {
         if (data.maxSeq) {
           localStorage.setItem(MAX_SEQ_STORAGE_KEY, String(data.maxSeq));
         }
-        return { clients: data.clients || [], bills: data.bills || [] };
+        return {
+          clients: data.clients || [],
+          bills: data.bills || [],
+          source: data.source,
+        };
       }
     } catch (e) {
       console.warn("Could not sync from cloud database:", e);
@@ -311,6 +315,7 @@ class StorageService {
   }
 
   public saveBill(payload: {
+    id?: string;
     billNumber?: string;
     clientId?: string;
     hotelName: string;
@@ -361,8 +366,37 @@ class StorageService {
 
     const totalAmount = validItems.reduce((sum, item) => sum + item.amount, 0);
 
+    // Check if bill with this ID or billNumber ALREADY exists (prevent duplicate creation!)
+    const cleanNum = billNumber.trim().toUpperCase();
+    const existingIndex = bills.findIndex(
+      (b) =>
+        (payload.id && b.id === payload.id) ||
+        b.billNumber.trim().toUpperCase() === cleanNum
+    );
+
+    if (existingIndex !== -1) {
+      // Update existing bill cleanly
+      const updated: SavedBill = {
+        ...bills[existingIndex],
+        clientId: client.id,
+        hotelName: client.hotelName,
+        clientPhone: payload.clientPhone || client.phone,
+        clientAddress: payload.clientAddress || client.address,
+        date: payload.date || bills[existingIndex].date,
+        items: validItems,
+        totalAmount,
+        itemCount: validItems.length,
+        notes: payload.notes !== undefined ? payload.notes : bills[existingIndex].notes,
+        updatedAt: new Date().toISOString(),
+      };
+
+      bills[existingIndex] = updated;
+      this.saveBillsList(bills);
+      return updated;
+    }
+
     const newBill: SavedBill = {
-      id: `bill_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: payload.id || `bill_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       billNumber,
       clientId: client.id,
       hotelName: client.hotelName,
@@ -418,12 +452,31 @@ class StorageService {
     return bill;
   }
 
-  public deleteBill(id: string): boolean {
+  public async deleteBill(id: string): Promise<boolean> {
     const bills = this.getBills();
-    const filtered = bills.filter((b) => b.id !== id);
-    if (filtered.length === bills.length) return false;
+    const billToDelete = bills.find((b) => b.id === id || b.billNumber === id);
+    const targetId = billToDelete ? billToDelete.id : id;
+    const targetBillNum = billToDelete ? billToDelete.billNumber : id;
 
-    this.saveBillsList(filtered);
+    const filtered = bills.filter((b) => b.id !== targetId && b.billNumber !== targetBillNum);
+    if (filtered.length === bills.length && !billToDelete) return false;
+
+    // Immediately update local storage so UI is responsive
+    if (this.isBrowser) {
+      localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(filtered));
+    }
+
+    // Immediately delete from Turso Cloud Database & disk
+    try {
+      await fetch("/api/records", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billIds: [targetId, targetBillNum] }),
+      });
+    } catch (e) {
+      console.warn("Could not delete from cloud database:", e);
+    }
+
     return true;
   }
 
@@ -431,15 +484,25 @@ class StorageService {
     if (!ids || ids.length === 0) return false;
     const bills = this.getBills();
     const set = new Set(ids);
-    const filtered = bills.filter((b) => !set.has(b.id));
+    const toDeleteBillNumbers: string[] = [];
 
-    this.saveBillsList(filtered);
+    bills.forEach((b) => {
+      if (set.has(b.id)) {
+        toDeleteBillNumbers.push(b.billNumber);
+      }
+    });
+
+    const filtered = bills.filter((b) => !set.has(b.id) && !set.has(b.billNumber));
+
+    if (this.isBrowser) {
+      localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(filtered));
+    }
 
     try {
       await fetch("/api/records", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billIds: ids }),
+        body: JSON.stringify({ billIds: [...ids, ...toDeleteBillNumbers] }),
       });
     } catch (e) {
       console.warn("Could not delete from cloud database:", e);

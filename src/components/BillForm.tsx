@@ -143,7 +143,8 @@ export const BillForm: React.FC<BillFormProps> = ({
     if (!validateForm()) return null;
 
     const saved = storage.saveBill({
-      billNumber,
+      id: savedSuccessBill?.id,
+      billNumber: savedSuccessBill?.billNumber || billNumber,
       clientId: selectedClientId || undefined,
       hotelName: hotelName.trim(),
       clientPhone,
@@ -153,6 +154,10 @@ export const BillForm: React.FC<BillFormProps> = ({
     });
 
     setSavedSuccessBill(saved);
+    if (saved.billNumber !== billNumber) {
+      setBillNumber(saved.billNumber);
+    }
+
     if (onBillSaved) {
       onBillSaved(saved);
     }
@@ -173,10 +178,7 @@ export const BillForm: React.FC<BillFormProps> = ({
       }
 
       await generatePDF("bill-preview", getFilename());
-
-      // Prepare next sequential bill number
-      const nextNum = storage.getNextBillNumber();
-      setBillNumber(nextNum);
+      // Keep saved bill active so user can also share to WhatsApp without duplicating
     } catch (err) {
       console.error("Error generating bill:", err);
     } finally {
@@ -196,14 +198,13 @@ export const BillForm: React.FC<BillFormProps> = ({
         return;
       }
 
+      const activeBillNum = saved.billNumber || billNumber;
       const blob = await generatePDF("bill-preview", getFilename(), { download: false });
       if (blob) {
-        const text = `Bill from PURE GREEN HARVEST FARMS\nBill No: ${billNumber}\nHotel: ${hotelName}\nDate: ${date}\nTotal Amount: ${formatCurrency(calculateTotal())}`;
+        const text = `Bill from PURE GREEN HARVEST FARMS\nBill No: ${activeBillNum}\nHotel: ${hotelName}\nDate: ${date}\nTotal Amount: ${formatCurrency(calculateTotal())}`;
         await shareOnWhatsApp(blob, getFilename(), text);
       }
-
-      const nextNum = storage.getNextBillNumber();
-      setBillNumber(nextNum);
+      // Keep saved bill active so no duplicate bill is created
     } catch (err) {
       console.error("Error sharing on WhatsApp:", err);
     } finally {
@@ -269,7 +270,7 @@ export const BillForm: React.FC<BillFormProps> = ({
       {/* Success Notification Banner */}
       {savedSuccessBill && (
         <div className="bg-emerald-50 border-b border-emerald-200 p-4 animate-in fade-in">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
               <div>
@@ -282,23 +283,23 @@ export const BillForm: React.FC<BillFormProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleResetForNewBill}
+                className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" /> Start Next Bill
+              </button>
               {onViewRegister && (
                 <button
                   type="button"
                   onClick={onViewRegister}
-                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
+                  className="px-3 py-1.5 bg-white hover:bg-gray-100 text-gray-800 text-xs font-bold rounded-xl border border-gray-300 transition-colors cursor-pointer"
                 >
                   View Register
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleResetForNewBill}
-                className="px-3 py-1 bg-white hover:bg-gray-100 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-300 transition-colors"
-              >
-                + Next Bill
-              </button>
             </div>
           </div>
         </div>

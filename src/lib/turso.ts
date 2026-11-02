@@ -173,6 +173,7 @@ export async function saveTursoBill(bill: SavedBill) {
   await initTurso();
 
   try {
+    // Upsert by bill_number or id so no duplicates can ever occur
     await turso.execute({
       sql: `INSERT INTO bills (id, bill_number, client_id, hotel_name, client_phone, client_address, date, items_json, total_amount, item_count, status, notes, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -241,9 +242,10 @@ export async function deleteTursoBillsByIds(ids: string[]): Promise<number> {
 
   try {
     const placeholders = ids.map(() => "?").join(",");
+    // Match both id AND bill_number so deletion is 100% permanent
     const result = await turso.execute({
-      sql: `DELETE FROM bills WHERE id IN (${placeholders})`,
-      args: ids,
+      sql: `DELETE FROM bills WHERE id IN (${placeholders}) OR bill_number IN (${placeholders})`,
+      args: [...ids, ...ids],
     });
     return result.rowsAffected || ids.length;
   } catch (error) {

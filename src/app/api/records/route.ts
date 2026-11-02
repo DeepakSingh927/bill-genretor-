@@ -134,7 +134,9 @@ export async function DELETE(request: Request) {
 
       const disk = readDiskBackup();
       if (disk && Array.isArray(disk.bills)) {
-        disk.bills = disk.bills.filter((b: any) => !billIds.includes(b.id));
+        disk.bills = disk.bills.filter(
+          (b: any) => !billIds.includes(b.id) && !billIds.includes(b.billNumber)
+        );
         writeDiskBackup(disk);
       }
 
