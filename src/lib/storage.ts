@@ -314,7 +314,7 @@ class StorageService {
     return generateNextBillNumber(bills, maxSeq);
   }
 
-  public saveBill(payload: {
+  public async saveBill(payload: {
     id?: string;
     billNumber?: string;
     clientId?: string;
@@ -324,7 +324,7 @@ class StorageService {
     date: string;
     items: BillItem[];
     notes?: string;
-  }): SavedBill {
+  }): Promise<SavedBill> {
     const bills = this.getBills();
     const clients = this.getClients();
 
@@ -391,7 +391,7 @@ class StorageService {
       };
 
       bills[existingIndex] = updated;
-      this.saveBillsList(bills);
+      await this.saveBillsList(bills);
       return updated;
     }
 
@@ -425,7 +425,7 @@ class StorageService {
     }
 
     bills.unshift(newBill);
-    this.saveBillsList(bills);
+    await this.saveBillsList(bills);
 
     return newBill;
   }
@@ -510,10 +510,10 @@ class StorageService {
     return true;
   }
 
-  private saveBillsList(bills: SavedBill[]) {
+  private async saveBillsList(bills: SavedBill[]) {
     if (!this.isBrowser) return;
     localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(bills));
-    this.syncToBackend(this.getClients(), bills, this.getMaxSeq());
+    await this.syncToBackend(this.getClients(), bills, this.getMaxSeq());
   }
 
   // --- BACKUP & RESTORE ---

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
-import { Plus, Trash2, FileDown, Share2, Eye, Building2, PlusCircle, CheckCircle, AlertCircle, RefreshCw, Hash, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Trash2, FileDown, Share2, Eye, Building2, PlusCircle, CheckCircle, AlertCircle, RefreshCw, Hash, Calendar as CalendarIcon, Save } from "lucide-react";
 import { BillData, BillItem, Client, SavedBill } from "@/types/bill";
 import { generatePDF } from "@/lib/generatePDF";
 import { shareOnWhatsApp } from "@/lib/share";
@@ -35,6 +35,7 @@ export const BillForm: React.FC<BillFormProps> = ({
   const [date, setDate] = useState<string>(format(new Date(), "dd-MM-yyyy"));
   const [items, setItems] = useState<BillItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -139,44 +140,68 @@ export const BillForm: React.FC<BillFormProps> = ({
   };
 
   // Save bill record into permanent storage
-  const executeSaveBill = (): SavedBill | null => {
+  const executeSaveBill = async (): Promise<SavedBill | null> => {
     if (!validateForm()) return null;
 
-    const saved = storage.saveBill({
-      id: savedSuccessBill?.id,
-      billNumber: savedSuccessBill?.billNumber || billNumber,
-      clientId: selectedClientId || undefined,
-      hotelName: hotelName.trim(),
-      clientPhone,
-      clientAddress,
-      date,
-      items,
-    });
+    setIsSaving(true);
+    try {
+      const saved = await storage.saveBill({
+        id: savedSuccessBill?.id,
+        billNumber: savedSuccessBill?.billNumber || billNumber,
+        clientId: selectedClientId || undefined,
+        hotelName: hotelName.trim(),
+        clientPhone,
+        clientAddress,
+        date,
+        items,
+      });
 
-    setSavedSuccessBill(saved);
-    if (saved.billNumber !== billNumber) {
-      setBillNumber(saved.billNumber);
+      if (!saved) {
+        setFormError("Could not save bill. Please try again.");
+        return null;
+      }
+
+      setSavedSuccessBill(saved);
+      if (saved.billNumber !== billNumber) {
+        setBillNumber(saved.billNumber);
+      }
+
+      if (onBillSaved) {
+        onBillSaved(saved);
+      }
+
+      return saved;
+    } catch (err) {
+      console.error("Save error:", err);
+      setFormError("Failed to save bill. Please try again.");
+      return null;
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    if (onBillSaved) {
-      onBillSaved(saved);
+  const handleDirectSave = async () => {
+    if (isSaving || isGenerating) return;
+    const saved = await executeSaveBill();
+    if (saved) {
+      setFormError(null);
     }
-
-    return saved;
   };
 
   const handleDownloadPDF = async () => {
-    if (isGenerating) return; // Prevent duplicate clicks
+    if (isGenerating || isSaving) return; // Prevent duplicate clicks
     if (!validateForm()) return;
 
     setIsGenerating(true);
     try {
-      const saved = executeSaveBill();
+      // 1. Mandatory rule: Bill MUST be saved first!
+      const saved = await executeSaveBill();
       if (!saved) {
-        setIsGenerating(false);
+        // Without saved, nothing should happen!
         return;
       }
 
+      // 2. Only after saving successfully, proceed to download PDF
       await generatePDF("bill-preview", getFilename());
       // Keep saved bill active so user can also share to WhatsApp without duplicating
     } catch (err) {
@@ -187,17 +212,19 @@ export const BillForm: React.FC<BillFormProps> = ({
   };
 
   const handleShareWhatsApp = async () => {
-    if (isGenerating) return;
+    if (isGenerating || isSaving) return;
     if (!validateForm()) return;
 
     setIsGenerating(true);
     try {
-      const saved = executeSaveBill();
+      // 1. Mandatory rule: Bill MUST be saved first!
+      const saved = await executeSaveBill();
       if (!saved) {
-        setIsGenerating(false);
+        // Without saved, nothing should happen!
         return;
       }
 
+      // 2. Only after saving successfully, proceed to share on WhatsApp
       const activeBillNum = saved.billNumber || billNumber;
       const blob = await generatePDF("bill-preview", getFilename(), { download: false });
       if (blob) {
@@ -570,33 +597,54 @@ export const BillForm: React.FC<BillFormProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-2">
           <button
             type="button"
             onClick={scrollToPreview}
-            className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 w-full py-3 px-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl text-xs transition-all cursor-pointer"
           >
-            <Eye className="w-5 h-5" /> Preview Bill
+            <Eye className="w-4 h-4" /> Preview
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDirectSave}
+            disabled={isSaving || isGenerating}
+            className={`flex items-center justify-center gap-1.5 w-full py-3 px-3 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer disabled:opacity-70 ${
+              savedSuccessBill
+                ? "bg-emerald-700 hover:bg-emerald-800"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {savedSuccessBill ? (
+              <>
+                <CheckCircle className="w-4 h-4 text-emerald-300" /> Saved ({savedSuccessBill.billNumber})
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" /> {isSaving ? "Saving..." : "Save Bill"}
+              </>
+            )}
           </button>
 
           <button
             type="button"
             onClick={handleDownloadPDF}
-            disabled={isGenerating}
-            className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-200 transition-all disabled:opacity-70 cursor-pointer"
+            disabled={isGenerating || isSaving}
+            className="flex items-center justify-center gap-1.5 w-full py-3 px-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-xs shadow-md shadow-green-200 transition-all disabled:opacity-70 cursor-pointer"
           >
-            <FileDown className="w-5 h-5" />
-            {isGenerating ? "Generating & Saving..." : "Save & Download PDF"}
+            <FileDown className="w-4 h-4" />
+            {isGenerating ? "Processing..." : savedSuccessBill ? "Download PDF" : "Save & Download"}
           </button>
 
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            disabled={isGenerating}
-            className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold rounded-xl shadow-lg shadow-green-100 transition-all disabled:opacity-70 cursor-pointer"
+            disabled={isGenerating || isSaving}
+            className="flex items-center justify-center gap-1.5 w-full py-3 px-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold rounded-xl text-xs shadow-md shadow-green-100 transition-all disabled:opacity-70 cursor-pointer"
           >
-            <Share2 className="w-5 h-5" />
-            Save & WhatsApp
+            <Share2 className="w-4 h-4" />
+            {savedSuccessBill ? "Share WhatsApp" : "Save & WhatsApp"}
           </button>
         </div>
       </div>
